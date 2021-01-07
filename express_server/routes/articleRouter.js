@@ -8,128 +8,14 @@ const articleRouter = express.Router();
 
 articleRouter.use(bodyParser.json());
 
-const parseDate = (date) => {
-    const splits = date.toString().split(" ");
-    const timeSplits = splits[4].split(":");
-
-    const isAm = parseInt(timeSplits[0]) <= 12 ? true : false;
-    const hour = isAm ? timeSplits[0] : "" + (parseInt(timeSplits[0]) - 12);
-    const time = hour + ":" + timeSplits[1] + (isAm ? "AM" : "PM");
-    console.log(time);
-    return splits[0] + " " + splits[1] + " " + splits[2] + " " + splits[3] + " " + time;
-};
-
 articleRouter.get("/all", (req, res) => {
     database
         .articles()
         .find()
-
-        // Step 1. Fetch articles
-        // Step 2. Fetch tag Ids using the article Id
         .then((articles) => {
-            let promises = [];
-
-            for (let i = 0; i < articles.length; i++) {
-                const article = articles[i];
-
-                promises.push(
-                    new Promise((resolve, reject) => {
-                        database
-                            .tagsArticleRelation()
-                            .findByArticleId(article._id)
-                            .then((relations) => {
-                                resolve({
-                                    id: article._id,
-                                    title: article.title,
-                                    article: article.article,
-                                    createdAt: parseDate(article.createdAt),
-                                    updatedAt: parseDate(article.updatedAt),
-                                    tags: relations.map((relation) => relation.tagId),
-                                });
-                            });
-                    }),
-                );
-            }
-
-            return Promise.all(promises);
+            return completeArticles(articles);
         })
 
-        // Step 3. Fetch tags
-        .then((articles) => {
-            let promises = [];
-
-            for (let i = 0; i < articles.length; i++) {
-                const article = articles[i];
-
-                let tags = [];
-                promises.push(
-                    new Promise((rslv, rej) => {
-                        for (let j = 0; j < article.tags.length; j++) {
-                            const tagId = article.tags[j];
-
-                            console.log(tagId);
-                            tags.push(
-                                new Promise((resolve, reject) => {
-                                    database
-                                        .tags()
-                                        .findById(tagId)
-                                        .then((tag) => {
-                                            resolve({ id: tag._id, name: tag.name });
-                                        })
-                                        .catch((err) => reject(err));
-                                }),
-                            );
-                        }
-
-                        Promise.all(tags)
-                            .then((tags) => {
-                                rslv({
-                                    ...article,
-                                    tags: tags,
-                                });
-                            })
-                            .catch((err) => rej(err));
-                    }),
-                );
-            }
-
-            return Promise.all(promises);
-        })
-
-        // Step 4. Fetch user for each article
-        .then((articles) => {
-            let promises = [];
-
-            for (let i = 0; i < articles.length; i++) {
-                const article = articles[i];
-
-                promises.push(
-                    new Promise((resolve, reject) => {
-                        database
-                            .userArticleRelation()
-                            .findByArticleId(article.id)
-                            .then((relation) => {
-                                const userId = relation.userId;
-                                database
-                                    .users()
-                                    .findById(userId)
-                                    .then((user) => {
-                                        resolve({
-                                            ...article,
-                                            author: {
-                                                id: user._id,
-                                                username: user.username,
-                                                name: user.name,
-                                            },
-                                        });
-                                    });
-                            });
-                    }),
-                );
-            }
-
-            return Promise.all(promises);
-        })
         .then((articles) => {
             res.statusCode = 200;
             res.setHeader("Content-Type", "application/json");
@@ -167,110 +53,7 @@ articleRouter.get("/tag", (req, res) => {
             });
         })
         .then((articles) => {
-            console.log(articles);
-
-            let promises = [];
-
-            for (let i = 0; i < articles.length; i++) {
-                const article = articles[i];
-
-                promises.push(
-                    new Promise((resolve, reject) => {
-                        database
-                            .tagsArticleRelation()
-                            .findByArticleId(article._id)
-                            .then((relations) => {
-                                resolve({
-                                    id: article._id,
-                                    title: article.title,
-                                    article: article.article,
-                                    createdAt: parseDate(article.createdAt),
-                                    updatedAt: parseDate(article.updatedAt),
-                                    tags: relations.map((relation) => relation.tagId),
-                                });
-                            });
-                    }),
-                );
-            }
-
-            return Promise.all(promises);
-        })
-
-        // Step 3. Fetch tags
-        .then((articles) => {
-            let promises = [];
-
-            for (let i = 0; i < articles.length; i++) {
-                const article = articles[i];
-
-                let tags = [];
-                promises.push(
-                    new Promise((rslv, rej) => {
-                        for (let j = 0; j < article.tags.length; j++) {
-                            const tagId = article.tags[j];
-
-                            console.log(tagId);
-                            tags.push(
-                                new Promise((resolve, reject) => {
-                                    database
-                                        .tags()
-                                        .findById(tagId)
-                                        .then((tag) => {
-                                            resolve({ id: tag._id, name: tag.name });
-                                        })
-                                        .catch((err) => reject(err));
-                                }),
-                            );
-                        }
-
-                        Promise.all(tags)
-                            .then((tags) => {
-                                rslv({
-                                    ...article,
-                                    tags: tags,
-                                });
-                            })
-                            .catch((err) => rej(err));
-                    }),
-                );
-            }
-
-            return Promise.all(promises);
-        })
-
-        // Step 4. Fetch user for each article
-        .then((articles) => {
-            let promises = [];
-
-            for (let i = 0; i < articles.length; i++) {
-                const article = articles[i];
-
-                promises.push(
-                    new Promise((resolve, reject) => {
-                        database
-                            .userArticleRelation()
-                            .findByArticleId(article.id)
-                            .then((relation) => {
-                                const userId = relation.userId;
-                                database
-                                    .users()
-                                    .findById(userId)
-                                    .then((user) => {
-                                        resolve({
-                                            ...article,
-                                            author: {
-                                                id: user._id,
-                                                username: user.username,
-                                                name: user.name,
-                                            },
-                                        });
-                                    });
-                            });
-                    }),
-                );
-            }
-
-            return Promise.all(promises);
+            return completeArticles(articles);
         })
         .then((articles) => {
             res.statusCode = 200;
@@ -387,108 +170,7 @@ articleRouter.get("/user", authenticate.verifyUser, (req, res) => {
             return Promise.all(promises);
         })
         .then((articles) => {
-            let promises = [];
-
-            for (let i = 0; i < articles.length; i++) {
-                const article = articles[i];
-
-                promises.push(
-                    new Promise((resolve, reject) => {
-                        database
-                            .tagsArticleRelation()
-                            .findByArticleId(article._id)
-                            .then((relations) => {
-                                resolve({
-                                    id: article._id,
-                                    title: article.title,
-                                    article: article.article,
-                                    createdAt: parseDate(article.createdAt),
-                                    updatedAt: parseDate(article.updatedAt),
-                                    tags: relations.map((relation) => relation.tagId),
-                                });
-                            });
-                    }),
-                );
-            }
-
-            return Promise.all(promises);
-        })
-
-        // Step 3. Fetch tags
-        .then((articles) => {
-            let promises = [];
-
-            for (let i = 0; i < articles.length; i++) {
-                const article = articles[i];
-
-                let tags = [];
-                promises.push(
-                    new Promise((rslv, rej) => {
-                        for (let j = 0; j < article.tags.length; j++) {
-                            const tagId = article.tags[j];
-
-                            console.log(tagId);
-                            tags.push(
-                                new Promise((resolve, reject) => {
-                                    database
-                                        .tags()
-                                        .findById(tagId)
-                                        .then((tag) => {
-                                            resolve({ id: tag._id, name: tag.name });
-                                        })
-                                        .catch((err) => reject(err));
-                                }),
-                            );
-                        }
-
-                        Promise.all(tags)
-                            .then((tags) => {
-                                rslv({
-                                    ...article,
-                                    tags: tags,
-                                });
-                            })
-                            .catch((err) => rej(err));
-                    }),
-                );
-            }
-
-            return Promise.all(promises);
-        })
-
-        // Step 4. Fetch user for each article
-        .then((articles) => {
-            let promises = [];
-
-            for (let i = 0; i < articles.length; i++) {
-                const article = articles[i];
-
-                promises.push(
-                    new Promise((resolve, reject) => {
-                        database
-                            .userArticleRelation()
-                            .findByArticleId(article.id)
-                            .then((relation) => {
-                                const userId = relation.userId;
-                                database
-                                    .users()
-                                    .findById(userId)
-                                    .then((user) => {
-                                        resolve({
-                                            ...article,
-                                            author: {
-                                                id: user._id,
-                                                username: user.username,
-                                                name: user.name,
-                                            },
-                                        });
-                                    });
-                            });
-                    }),
-                );
-            }
-
-            return Promise.all(promises);
+            return completeArticles(articles);
         })
         .then((articles) => {
             res.statusCode = 200;
@@ -501,5 +183,123 @@ articleRouter.get("/user", authenticate.verifyUser, (req, res) => {
             res.send({ err: err });
         });
 });
+
+// Takes in date and gives it back in human likable format
+const parseDate = (date) => {
+    const splits = date.toString().split(" ");
+    const timeSplits = splits[4].split(":");
+
+    const isAm = parseInt(timeSplits[0]) <= 12 ? true : false;
+    const hour = isAm ? timeSplits[0] : "" + (parseInt(timeSplits[0]) - 12);
+    const time = hour + ":" + timeSplits[1] + (isAm ? "AM" : "PM");
+    return splits[0] + " " + splits[1] + " " + splits[2] + " " + splits[3] + " " + time;
+};
+
+// Takes in articles and adds tags and user info in it
+const completeArticles = (articles) => {
+    // Step 1. Input articles
+    // Step 2. Fetch tag Ids using the article Id
+    return new Promise((ress, rejj) => {
+        let promises = [];
+
+        for (let i = 0; i < articles.length; i++) {
+            const article = articles[i];
+
+            promises.push(
+                new Promise((resolve, reject) => {
+                    database
+                        .tagsArticleRelation()
+                        .findByArticleId(article._id)
+                        .then((relations) => {
+                            resolve({
+                                id: article._id,
+                                title: article.title,
+                                article: article.article,
+                                createdAt: parseDate(article.createdAt),
+                                updatedAt: parseDate(article.updatedAt),
+                                tags: relations.map((relation) => relation.tagId),
+                            });
+                        });
+                }),
+            );
+        }
+        Promise.all(promises)
+            // Step 3. Fetch tags
+            .then((articles) => {
+                let promises = [];
+
+                for (let i = 0; i < articles.length; i++) {
+                    const article = articles[i];
+
+                    let tags = [];
+                    promises.push(
+                        new Promise((rslv, rej) => {
+                            for (let j = 0; j < article.tags.length; j++) {
+                                const tagId = article.tags[j];
+
+                                tags.push(
+                                    new Promise((resolve, reject) => {
+                                        database
+                                            .tags()
+                                            .findById(tagId)
+                                            .then((tag) => {
+                                                resolve({ id: tag._id, name: tag.name });
+                                            })
+                                            .catch((err) => reject(err));
+                                    }),
+                                );
+                            }
+
+                            Promise.all(tags)
+                                .then((tags) => {
+                                    rslv({
+                                        ...article,
+                                        tags: tags,
+                                    });
+                                })
+                                .catch((err) => rej(err));
+                        }),
+                    );
+                }
+
+                return Promise.all(promises);
+            })
+            // Step 4. Fetch user for each article
+            .then((articles) => {
+                let promises = [];
+
+                for (let i = 0; i < articles.length; i++) {
+                    const article = articles[i];
+
+                    promises.push(
+                        new Promise((resolve, reject) => {
+                            database
+                                .userArticleRelation()
+                                .findByArticleId(article.id)
+                                .then((relation) => {
+                                    const userId = relation.userId;
+                                    database
+                                        .users()
+                                        .findById(userId)
+                                        .then((user) => {
+                                            resolve({
+                                                ...article,
+                                                author: {
+                                                    id: user._id,
+                                                    username: user.username,
+                                                    name: user.name,
+                                                },
+                                            });
+                                        });
+                                });
+                        }),
+                    );
+                }
+
+                return Promise.all(promises);
+            })
+            .then((articles) => ress(articles));
+    });
+};
 
 module.exports = articleRouter;
