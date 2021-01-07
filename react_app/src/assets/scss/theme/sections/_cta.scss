@@ -1,0 +1,19 @@
+.cta {
+    .form-input {
+        border-color: transparent;
+        border-radius: 2px;
+    }
+}
+
+@include media(">medium") {
+    .cta {
+        .form-input {
+            min-width: 280px;
+        }
+    }
+
+    .cta-inner {
+        padding-left: 48px;
+        padding-right: 48px;
+    }
+}

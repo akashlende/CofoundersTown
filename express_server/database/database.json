@@ -1,0 +1,25 @@
+{
+    "users": {
+        "_id": "",
+        "email": "",
+        "name": "",
+        "username": "",
+        "age": ""
+    },
+    "articles": {
+        "title": "",
+        "article": ""
+    },
+    "tags": {
+        "name": "",
+        "lowerCaseName": ""
+    },
+    "usersArticlesRelations": {
+        "userId": "",
+        "articleId": ""
+    },
+    "tagsArticleRelation": {
+        "tagId": "",
+        "articleId": ""
+    }
+}
